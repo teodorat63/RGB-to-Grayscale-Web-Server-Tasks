@@ -1,76 +1,68 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
+using System.Threading.Tasks;
 
 namespace Projekat
 {
     internal class TcpServer
     {
-        private TcpListener tcpListener;
-        private List<RequestInfo> receivedRequests;
-        private readonly object requestLock = new object();
+        private readonly TcpListener tcpListener;
+        private readonly ConcurrentBag<RequestInfo> receivedRequests;
+        private readonly HttpRequestHandler requestHandler;
 
         public TcpServer(IPAddress ipAddress, int port)
         {
             tcpListener = new TcpListener(ipAddress, port);
-            receivedRequests = new List<RequestInfo>();
+            receivedRequests = new ConcurrentBag<RequestInfo>();
+            requestHandler = new HttpRequestHandler();
         }
-        public void StartServer()
+
+        public async Task StartServer()
         {
             tcpListener.Start();
             Console.WriteLine("Server started...");
 
-            while (true)
+            try
             {
-                TcpClient client = tcpListener.AcceptTcpClient();
-                Console.WriteLine("Client connected...");
+                while (true)
+                {
+                    var client = await tcpListener.AcceptTcpClientAsync();
+                    Console.WriteLine("Client connected...");
 
-                Thread clientThread = new Thread(() => HandleClient(client));
-                clientThread.Start();
-
+                    _ = HandleClientAsync(client);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error accepting client: {ex.Message}");
             }
         }
 
-        private void HandleClient(TcpClient client)
+        private async Task HandleClientAsync(TcpClient client)
         {
-
             using (client)
             {
-
                 using (NetworkStream stream = client.GetStream())
                 {
-
-                    HttpRequestHandler requestHandler = new HttpRequestHandler();
-                    RequestInfo newRequest = new RequestInfo();
-
                     try
                     {
-                        string request = requestHandler.ReadRequest(stream);
+                        string request = await requestHandler.ReadRequestAsync(stream);
+                        Console.WriteLine(request);
 
-                        lock (requestLock)
-                        {
-                            newRequest.request = request;
-                            receivedRequests.Add(newRequest);
-                        }
+                        var requestInfo = new RequestInfo { request = request };
+                        receivedRequests.Add(requestInfo);
+
+                        Console.WriteLine($"Request {requestInfo.myNumber} received:\n{requestInfo}");
 
                     }
                     catch (Exception ex)
                     {
-                        newRequest.details = "Unsuccessful " + ex.Message;
-
-
-                    }
-                    finally
-                    {
-                         Console.WriteLine(newRequest.ToString()); 
+                        Console.WriteLine($"Error handling client request: {ex.Message}");
                     }
                 }
             }
         }
-
-       
     }
 }
