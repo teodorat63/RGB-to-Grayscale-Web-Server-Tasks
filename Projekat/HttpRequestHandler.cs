@@ -16,7 +16,7 @@ namespace Projekat
             imageService = new ImageService();
         }
 
-        public async Task<string> ReadRequestAsync(NetworkStream stream)
+        public async Task ReadRequestAsync(NetworkStream stream, RequestInfo requestInfo)
         {
             byte[] buffer = new byte[1024];
             int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
@@ -25,16 +25,26 @@ namespace Projekat
             string[] parts = request.Split(' ');
             string filename = parts[1].Substring(1);
 
+            requestInfo.request = "Client is requesting " + filename;
+
             if (filename == "")
             {
                 await SendResponseAsync("Dobrodosli na server!", stream);
+                requestInfo.details = "Succesfully accessed index page";
             }
             else if (IsValidImageRequest(filename))
             {
                 byte[] outputData = await imageService.ServeImageAsync(filename);
                 await SendImageResponseAsync(outputData, stream);
+                requestInfo.details = "Request for an image sucessfully processed";
+
             }
-            return request;
+            else
+            {
+                requestInfo.details = "File requested is not a valid image file";
+
+            }
+            return;
         }
 
         public async Task SendResponseAsync(string request, NetworkStream stream)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Net;
 
 public class RequestInfo
 {
@@ -11,6 +12,7 @@ public class RequestInfo
         myNumber = numberOfRequests;
         stopwatch = new Stopwatch();
     }
+
 
     public int myNumber { get; set; }
 
@@ -46,7 +48,7 @@ public class RequestInfo
 
     public override string ToString()
     {
-        string response = myNumber + ". Request\n " + request + " " + details + "\n" + "Time: " + time + "\n";
+        string response = "\n" + "Request " + this.myNumber + " received\n" + this.request + "\n" + details + "\n" + time;
         return response;
     }
 }

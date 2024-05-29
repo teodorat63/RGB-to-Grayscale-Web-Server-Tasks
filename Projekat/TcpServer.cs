@@ -46,20 +46,21 @@ namespace Projekat
             {
                 using (NetworkStream stream = client.GetStream())
                 {
+                    RequestInfo newRequest = new RequestInfo();
                     try
                     {
-                        string request = await requestHandler.ReadRequestAsync(stream);
-                        Console.WriteLine(request);
+                        receivedRequests.Add(newRequest);
 
-                        var requestInfo = new RequestInfo { request = request };
-                        receivedRequests.Add(requestInfo);
-
-                        Console.WriteLine($"Request {requestInfo.myNumber} received:\n{requestInfo}");
+                        await requestHandler.ReadRequestAsync(stream, newRequest);
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        newRequest.details = ex.Message;
 
                     }
-                    catch (Exception ex)
+                    finally
                     {
-                        Console.WriteLine($"Error handling client request: {ex.Message}");
+                        Console.WriteLine(newRequest);
                     }
                 }
             }
